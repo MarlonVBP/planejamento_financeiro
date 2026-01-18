@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "929166352594",
+    "project_id": "planejamentofinanceiro-faa6c",
+    "storage_bucket": "planejamentofinanceiro-faa6c.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:929166352594:android:c0b609db6ef6ef37c98d0b",
+        "android_client_info": {
+          "package_name": "com.example.planejamento_financeiro"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyALx5Hg6o28dMnYRA-rU8BhXAME9RlUinQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
