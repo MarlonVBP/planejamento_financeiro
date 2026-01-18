@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:planejamento_financeiro/core/features/dashboard/views/dashboard_page.dart';
+import 'package:planejamento_financeiro/core/features/home/views/home_page.dart';
 import 'firebase_options.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/app_colors.dart';
@@ -26,7 +26,7 @@ class FinanceApp extends StatelessWidget {
       title: 'Finance Planner',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.getTheme(seedColor: AppColors.greenTeal, isDark: true),
-      home: const DashboardPage(),
+      home: const HomePage(),
     );
   }
 }
