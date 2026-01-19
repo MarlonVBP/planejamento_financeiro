@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:planejamento_financeiro/core/theme/app_colors.dart';
+import 'package:planejamento_financeiro/data/models/transaction_model.dart';
+import 'package:planejamento_financeiro/data/services/transaction_service.dart';
 
 class TransactionFormPage extends StatefulWidget {
   const TransactionFormPage({super.key});
@@ -9,10 +11,43 @@ class TransactionFormPage extends StatefulWidget {
 }
 
 class _TransactionFormPageState extends State<TransactionFormPage> {
-  bool _isIncome = false; // Começa como despesa (mais comum)
+  bool _isIncome = false;
   final _amountController = TextEditingController();
   final _descController = TextEditingController();
   DateTime _selectedDate = DateTime.now();
+  final _service = TransactionService(); // Instância do Serviço
+  bool _isLoading = false;
+
+  Future<void> _saveTransaction() async {
+    if (_amountController.text.isEmpty || _descController.text.isEmpty) return;
+
+    setState(() => _isLoading = true);
+
+    final double amount =
+        double.tryParse(_amountController.text.replaceAll(',', '.')) ?? 0.0;
+
+    final transaction = TransactionModel(
+      id: '', // O Firebase gera o ID
+      title: _descController.text,
+      amount: amount,
+      isIncome: _isIncome,
+      date: _selectedDate,
+    );
+
+    try {
+      await _service.addTransaction(transaction);
+      if (mounted) Navigator.pop(context);
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Erro ao salvar: $e"),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -38,11 +73,15 @@ class _TransactionFormPageState extends State<TransactionFormPage> {
               children: [
                 Text(
                   "Valor",
-                  style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.6)),
+                  style: TextStyle(
+                    color: theme.colorScheme.onSurface.withOpacity(0.6),
+                  ),
                 ),
                 TextField(
                   controller: _amountController,
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
                   style: TextStyle(
                     fontSize: 48,
                     fontWeight: FontWeight.bold,
@@ -52,7 +91,9 @@ class _TransactionFormPageState extends State<TransactionFormPage> {
                     prefixText: "R\$ ",
                     border: InputBorder.none,
                     hintText: "0,00",
-                    hintStyle: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.2)),
+                    hintStyle: TextStyle(
+                      color: theme.colorScheme.onSurface.withOpacity(0.2),
+                    ),
                   ),
                   autofocus: true,
                 ),
@@ -65,7 +106,9 @@ class _TransactionFormPageState extends State<TransactionFormPage> {
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
                 color: theme.colorScheme.surfaceContainer,
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(32),
+                ),
               ),
               child: SingleChildScrollView(
                 child: Column(
@@ -73,8 +116,16 @@ class _TransactionFormPageState extends State<TransactionFormPage> {
                     // Seletor de Tipo (Receita / Despesa)
                     SegmentedButton<bool>(
                       segments: const [
-                        ButtonSegment(value: false, label: Text("Despesa"), icon: Icon(Icons.arrow_downward)),
-                        ButtonSegment(value: true, label: Text("Receita"), icon: Icon(Icons.arrow_upward)),
+                        ButtonSegment(
+                          value: false,
+                          label: Text("Despesa"),
+                          icon: Icon(Icons.arrow_downward),
+                        ),
+                        ButtonSegment(
+                          value: true,
+                          label: Text("Receita"),
+                          icon: Icon(Icons.arrow_upward),
+                        ),
                       ],
                       selected: {_isIncome},
                       onSelectionChanged: (Set<bool> newSelection) {
@@ -83,25 +134,24 @@ class _TransactionFormPageState extends State<TransactionFormPage> {
                         });
                       },
                       style: ButtonStyle(
-                        backgroundColor: MaterialStateProperty.resolveWith<Color?>(
-                          (states) {
-                            if (states.contains(MaterialState.selected)) {
-                              return activeColor.withOpacity(0.2);
-                            }
-                            return null;
-                          },
-                        ),
-                        foregroundColor: MaterialStateProperty.resolveWith<Color?>(
-                          (states) {
-                             if (states.contains(MaterialState.selected)) {
-                              return activeColor; // Ícone/Texto colorido quando selecionado
-                             }
-                             return theme.colorScheme.onSurface;
+                        backgroundColor:
+                            MaterialStateProperty.resolveWith<Color?>((states) {
+                              if (states.contains(MaterialState.selected)) {
+                                return activeColor.withOpacity(0.2);
+                              }
+                              return null;
+                            }),
+                        foregroundColor: MaterialStateProperty.resolveWith<Color?>((
+                          states,
+                        ) {
+                          if (states.contains(MaterialState.selected)) {
+                            return activeColor; // Ícone/Texto colorido quando selecionado
                           }
-                        ),
+                          return theme.colorScheme.onSurface;
+                        }),
                       ),
                     ),
-                    
+
                     const SizedBox(height: 24),
 
                     // Inputs Padrão
@@ -114,7 +164,7 @@ class _TransactionFormPageState extends State<TransactionFormPage> {
                       ),
                     ),
                     const SizedBox(height: 16),
-                    
+
                     // Input de Data (Fake por enquanto)
                     InkWell(
                       onTap: () async {
@@ -138,9 +188,9 @@ class _TransactionFormPageState extends State<TransactionFormPage> {
                         ),
                       ),
                     ),
-                    
+
                     const SizedBox(height: 32),
-                    
+
                     // Botão Salvar
                     SizedBox(
                       width: double.infinity,

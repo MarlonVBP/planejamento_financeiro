@@ -1,145 +1,126 @@
 import 'package:flutter/material.dart';
 import 'package:planejamento_financeiro/core/theme/app_colors.dart';
+import 'package:planejamento_financeiro/data/models/transaction_model.dart';
+import 'package:planejamento_financeiro/data/services/transaction_service.dart';
 
 class DashboardPage extends StatelessWidget {
   const DashboardPage({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
+    final transactionService = TransactionService();
 
-    return Scaffold(
-      body: CustomScrollView(
-        slivers: [
-          _buildAppBar(colorScheme),
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.all(20.0),
-              child: Column(
-                children: [
-                  _buildBalanceCard(context),
-                  const SizedBox(height: 32),
-                  _buildSectionHeader(context, "Operações Recentes"),
-                  const SizedBox(height: 16),
-                  // Lista Mockada para visualização inicial
-                  _buildTransactionItem(context, "Salário Mensal", "R\$ 4.500,00", true),
-                  _buildTransactionItem(context, "Supermercado", "R\$ 850,00", false),
-                  _buildTransactionItem(context, "Investimento FIIs", "R\$ 500,00", false),
-                ],
+    // StreamBuilder "escuta" o banco de dados
+    return StreamBuilder<List<TransactionModel>>(
+      stream: transactionService.getTransactionsStream(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        if (!snapshot.hasData || snapshot.data!.isEmpty) {
+          return const Center(child: Text("Nenhuma transação ainda."));
+        }
+
+        final transactions = snapshot.data!;
+        
+        // Cálculo Dinâmico do Saldo
+        final totalBalance = transactions.fold(0.0, (sum, item) {
+          return item.isIncome ? sum + item.amount : sum - item.amount;
+        });
+
+        // Cálculos de Entradas e Saídas
+        final totalIncome = transactions
+            .where((t) => t.isIncome)
+            .fold(0.0, (sum, t) => sum + t.amount);
+            
+        final totalExpense = transactions
+            .where((t) => !t.isIncome)
+            .fold(0.0, (sum, t) => sum + t.amount);
+
+        return Scaffold(
+          body: CustomScrollView(
+            slivers: [
+              _buildAppBar(context),
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.all(20.0),
+                  child: Column(
+                    children: [
+                      // Passamos os valores calculados para o Card
+                      _buildBalanceCard(context, totalBalance, totalIncome, totalExpense),
+                      const SizedBox(height: 32),
+                      _buildSectionHeader(context, "Operações Recentes"),
+                      const SizedBox(height: 16),
+                      
+                      // Lista Dinâmica
+                      ...transactions.map((t) => _buildTransactionItem(context, t)),
+                    ],
+                  ),
+                ),
               ),
-            ),
-          ),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {},
-        child: const Icon(Icons.add),
-      ),
-    );
-  }
-
-  SliverAppBar _buildAppBar(ColorScheme colors) {
-    return SliverAppBar(
-      floating: true,
-      snap: true,
-      title: Row(
-        children: [
-          CircleAvatar(
-            backgroundColor: colors.primary.withOpacity(0.2),
-            child: Icon(Icons.person, color: colors.primary),
-          ),
-          const SizedBox(width: 12),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text("Olá, Marlon", style: TextStyle(fontSize: 14, color: colors.onSurface.withOpacity(0.6))),
-              Text("Finance Planner", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: colors.onSurface)),
             ],
           ),
-        ],
-      ),
-      actions: [
-        IconButton(icon: const Icon(Icons.notifications_outlined), onPressed: () {}),
-        const SizedBox(width: 8),
-      ],
+        );
+      },
     );
   }
 
-  Widget _buildBalanceCard(BuildContext context) {
+  // --- Widgets Auxiliares (Atualizados para receber dados) ---
+
+  SliverAppBar _buildAppBar(BuildContext context) {
+    // Mesma implementação anterior, apenas simplificada aqui
     final colors = Theme.of(context).colorScheme;
-    
+    return SliverAppBar(
+      floating: true,
+      title: Text("Olá, Marlon", style: TextStyle(color: colors.onSurface)),
+    );
+  }
+
+  Widget _buildBalanceCard(BuildContext context, double balance, double income, double expense) {
+    final colors = Theme.of(context).colorScheme;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(28),
-        // Gradiente sutil para dar profundidade
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            colors.secondary,
-            AppColors.greenDarkest,
-          ],
+          colors: [colors.secondary, AppColors.greenDarkest],
         ),
-        boxShadow: [
-          BoxShadow(
-            color: colors.primary.withOpacity(0.15),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-          ),
-        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text("Saldo Total", style: TextStyle(color: colors.onSecondary.withOpacity(0.8))),
-          const SizedBox(height: 8),
           Text(
-            "R\$ 3.150,00",
-            style: TextStyle(
-              fontSize: 36, 
-              fontWeight: FontWeight.bold, 
-              color: colors.onSecondary,
-              height: 1.0,
-            ),
+            "R\$ ${balance.toStringAsFixed(2)}",
+            style: TextStyle(fontSize: 36, fontWeight: FontWeight.bold, color: colors.onSecondary),
           ),
           const SizedBox(height: 24),
           Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              _buildMiniInfo(context, Icons.arrow_upward, "Entradas", "R\$ 4.500"),
-              const SizedBox(width: 24),
-              _buildMiniInfo(context, Icons.arrow_downward, "Saídas", "R\$ 1.350"),
+              _buildMiniInfo(context, Icons.arrow_upward, "Entradas", "R\$ ${income.toStringAsFixed(0)}"),
+              _buildMiniInfo(context, Icons.arrow_downward, "Saídas", "R\$ ${expense.toStringAsFixed(0)}"),
             ],
           )
         ],
       ),
     );
   }
-
+  
   Widget _buildMiniInfo(BuildContext context, IconData icon, String label, String value) {
-    final color = Theme.of(context).colorScheme.onSecondary;
-    return Row(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(6),
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Icon(icon, color: color, size: 16),
-        ),
-        const SizedBox(width: 8),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(label, style: TextStyle(color: color.withOpacity(0.6), fontSize: 12)),
-            Text(value, style: TextStyle(color: color, fontWeight: FontWeight.w600)),
-          ],
-        ),
-      ],
-    );
+     final color = Theme.of(context).colorScheme.onSecondary;
+     return Row(children: [
+       Icon(icon, color: color, size: 16),
+       const SizedBox(width: 4),
+       Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+         Text(label, style: TextStyle(color: color.withOpacity(0.7), fontSize: 10)),
+         Text(value, style: TextStyle(color: color, fontWeight: FontWeight.bold)),
+       ])
+     ]);
   }
 
   Widget _buildSectionHeader(BuildContext context, String title) {
@@ -147,53 +128,40 @@ class DashboardPage extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(title, style: Theme.of(context).textTheme.titleLarge),
-        TextButton(onPressed: () {}, child: const Text("Ver tudo")),
       ],
     );
   }
 
-  Widget _buildTransactionItem(BuildContext context, String title, String value, bool isIncome) {
+  Widget _buildTransactionItem(BuildContext context, TransactionModel t) {
     final colors = Theme.of(context).colorScheme;
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: colors.surfaceContainer,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: colors.outline.withOpacity(0.05)),
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: isIncome ? AppColors.success.withOpacity(0.1) : AppColors.error.withOpacity(0.1),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              isIncome ? Icons.arrow_upward_rounded : Icons.arrow_downward_rounded,
-              color: isIncome ? AppColors.success : AppColors.error,
-              size: 20,
-            ),
+      child: ListTile(
+        contentPadding: EdgeInsets.zero,
+        leading: Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: t.isIncome ? AppColors.success.withOpacity(0.1) : AppColors.error.withOpacity(0.1),
+            shape: BoxShape.circle,
           ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title, style: TextStyle(fontWeight: FontWeight.w600, color: colors.onSurface)),
-                Text("Hoje, 10:00", style: TextStyle(fontSize: 12, color: colors.onSurface.withOpacity(0.5))),
-              ],
-            ),
+          child: Icon(
+            t.isIncome ? Icons.arrow_upward : Icons.arrow_downward,
+            color: t.isIncome ? AppColors.success : AppColors.error,
           ),
-          Text(
-            isIncome ? "+ $value" : "- $value",
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              color: isIncome ? AppColors.success : colors.onSurface,
-            ),
+        ),
+        title: Text(t.title, style: const TextStyle(fontWeight: FontWeight.bold)),
+        subtitle: Text(
+          "${t.date.day}/${t.date.month} - ${t.date.hour}:${t.date.minute.toString().padLeft(2, '0')}",
+          style: TextStyle(color: colors.onSurface.withOpacity(0.5)),
+        ),
+        trailing: Text(
+          t.isIncome ? "+ R\$ ${t.amount.toStringAsFixed(2)}" : "- R\$ ${t.amount.toStringAsFixed(2)}",
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: t.isIncome ? AppColors.success : colors.onSurface,
+            fontSize: 16,
           ),
-        ],
+        ),
       ),
     );
   }

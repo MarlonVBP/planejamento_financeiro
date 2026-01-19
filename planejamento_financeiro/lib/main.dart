@@ -6,8 +6,10 @@ import 'core/theme/app_theme.dart';
 import 'core/theme/app_colors.dart';
 
 void main() async {
+  // Garante que o motor do Flutter esteja pronto
   WidgetsFlutterBinding.ensureInitialized();
   
+  // Inicia o Firebase
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
@@ -20,8 +22,6 @@ class FinanceApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Aqui usamos a cor "Teal" como semente, que ativa o modo "Custom Green"
-    // definido no app_theme.dart para ser fiel à sua imagem.
     return MaterialApp(
       title: 'Finance Planner',
       debugShowCheckedModeBanner: false,

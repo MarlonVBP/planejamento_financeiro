@@ -42,6 +42,7 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions web = FirebaseOptions(
     apiKey: 'AIzaSyA_EUhAtAEsq8i_vD_54ZNC6R4dBYLNYjE',
+    databaseURL: 'https://planejamentofinanceiro-faa6c-default-rtdb.firebaseio.com/',
     appId: '1:929166352594:web:624723a2b485102ec98d0b',
     messagingSenderId: '929166352594',
     projectId: 'planejamentofinanceiro-faa6c',
